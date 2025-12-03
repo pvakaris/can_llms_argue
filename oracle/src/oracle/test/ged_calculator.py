@@ -54,15 +54,6 @@ def node_del_cost(attr: Dict[str, Any]) -> float:
     return 0.5
 
 def edge_subst_cost(attr1: Dict[str, Any], attr2: Dict[str, Any]) -> float:
-    e1: Optional[AIFEdge] = attr1.get("obj")
-    e2: Optional[AIFEdge] = attr2.get("obj")
-    if not e1 or not e2:
-        return 0.5
-    # if edges have a label/type in extras and they match -> cheap
-    lab1 = (e1.extras.get("label") or e1.extras.get("type") or "").strip().lower()
-    lab2 = (e2.extras.get("label") or e2.extras.get("type") or "").strip().lower()
-    if lab1 and lab2 and lab1 == lab2:
-        return 0.0
     return 0.5
 
 def edge_ins_cost(attr: Dict[str, Any]) -> float:
