@@ -1,0 +1,18 @@
+Run SonarQube locally using Docker:
+
+    docker pull sonarqube
+
+    docker run -d --name sonarqube-db -e POSTGRES_USER=sonar -e POSTGRES_PASSWORD=sonar -e POSTGRES_DB=sonarqube postgres:alpine
+
+    docker run -d --name sonarqube -p 9000:9000 --link sonarqube-db:db -e SONAR_JDBC_URL=jdbc:postgresql://db:5432/sonarqube -e SONAR_JDBC_USERNAME=sonar -e SONAR_JDBC_PASSWORD=sonar sonarqube
+
+Then run the following commands:
+
+    pip install pysonar
+
+    pysonar \
+      --sonar-host-url=http://localhost:9000 \
+      --sonar-token=sqp_74529ae822c50e4702cb7d80a47bef358a1d38ab \
+      --sonar-project-key=framework
+
+Inspect the static code analysis
