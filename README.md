@@ -1,6 +1,6 @@
 # The LLM discussion and argument mapping framework
 
-This project contains code that allows for machine-to-machine debates between LLMs and then maps those discussions to AIF arument maps.
+This project contains code that allows for machine-to-machine debates between LLMs and then maps those discussions to AIF argument maps.
 
 ---
 
