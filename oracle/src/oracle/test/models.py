@@ -1,3 +1,4 @@
+from __future__ import annotations
 from dataclasses import dataclass, field, asdict
 from typing import Optional, Dict, Any, List
 import networkx as nx
@@ -16,14 +17,27 @@ class AIFNode:
     type: Optional[str] = None
     timestamp: Optional[str] = None
     scheme: Optional[str] = None
-    schemeID: Optional[str] = None
+    scheme_id: Optional[str] = None
     extras: Dict[str, Any] = field(default_factory=dict, compare=False, hash=False)
 
     @staticmethod
     def from_dict(d: Dict[str, Any]) -> AIFNode:
-        known = {"nodeID", "text", "type", "timestamp", "scheme", "schemeID"}
-        base = {k: d.get(k) for k in known}
-        extras = {k: v for k, v in d.items() if k not in known}
+        mapping = {
+            "nodeID": "node_id",
+            "text": "text",
+            "type": "type",
+            "timestamp": "timestamp",
+            "scheme": "scheme",
+            "schemeID": "schemeID",
+        }
+
+        base = {}
+        for json_key, field_name in mapping.items():
+            if json_key in d:
+                base[field_name] = d[json_key]
+
+        extras = {k: v for k, v in d.items() if k not in mapping}
+
         return AIFNode(**base, extras=extras)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -60,9 +74,20 @@ class AIFEdge:
 
     @staticmethod
     def from_dict(d: Dict[str, Any]) -> AIFEdge:
-        known = {"edgeID", "fromID", "toID", "formEdgeID"}
-        base = {k: d.get(k) for k in known}
-        extras = {k: v for k, v in d.items() if k not in known}
+        mapping = {
+            "edgeID": "edge_id",
+            "fromID": "from_id",
+            "toID": "to_id",
+            "formEdgeID": "form_edge_id",
+        }
+
+        base = {}
+        for json_key, field_name in mapping.items():
+            if json_key in d:
+                base[field_name] = d[json_key]
+
+        extras = {k: v for k, v in d.items() if k not in mapping}
+
         return AIFEdge(**base, extras=extras)
 
     def to_dict(self) -> Dict[str, Any]:
