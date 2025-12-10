@@ -4,10 +4,10 @@ import time
 from openai import OpenAI
 import sys
 from dotenv import load_dotenv
-from typing import Callable, Optional
+from typing import Callable, Optional, Dict, Any
 
 from oracle.models.oracle_config import GPT_CONFIG
-from oracle.models.shared import run_with_query
+from oracle.models.shared import run_with_query, make_prompt
 
 load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -20,13 +20,12 @@ client = OpenAI(api_key=OPENAI_API_KEY)
 
 def make_chatgpt_query(
     model: str = GPT_CONFIG["MODEL_NAME"],
-    max_tokens: int = GPT_CONFIG["MAX_TOKENS"],
     temperature: float = GPT_CONFIG["TEMPERATURE"],
     retries: int = 2,
     system_prompt: Optional[str] = None
 ) -> Callable[[str], Optional[str]]:
 
-    def query_fn(prompt_text: str) -> Optional[str]:
+    def query_fn(prompt_text: str) -> Optional[Dict[str, Any]]:
         messages = []
         if system_prompt:
             messages.append({"role": "system", "content": system_prompt})
@@ -36,15 +35,39 @@ def make_chatgpt_query(
         attempt = 0
         while attempt <= retries:
             try:
-                resp = client.chat.completions.create(model=model,
-                messages=messages,
-                max_tokens=max_tokens,
-                temperature=temperature,
-                n=1)
+                resp = None
+                if GPT_CONFIG["PROMPT_ID"] is not None and GPT_CONFIG["PROMPT_VERSION"] is not None:
+                    print("Using predefined prompt")
+                    resp = client.responses.create(
+                        prompt={
+                            "id": GPT_CONFIG["PROMPT_ID"],
+                            "version": GPT_CONFIG["PROMPT_VERSION"]
+                        },
+                        input=prompt_text
+                    )
+                else:
+                    print("Using local config to construct the prompt")
+                    resp = client.responses.create(
+                        model=model,
+                        input=make_prompt(system_prompt, prompt_text),
+                        temperature=temperature,
+                    )
 
-                return clean_json(resp.choices[0].message.content)
+                print(resp)
+                message_text = resp.output[1].content[0].text
+                metadata = {
+                    "input_tokens": resp.usage.input_tokens,
+                    "output_tokens": resp.usage.output_tokens,
+                    "total_tokens": resp.usage.total_tokens,
+                    "model": resp.model
+                }
 
+                return {
+                    "message": clean_json(message_text),
+                    "metadata": metadata
+                }
             except Exception as e:
+                print(e)
                 attempt += 1
                 if attempt > retries:
                     print("ChatGPT error:", e)

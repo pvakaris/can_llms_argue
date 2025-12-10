@@ -1,16 +1,26 @@
 from __future__ import annotations
 import json
 import re
+from pathlib import Path
 from typing import Dict, Any
 from jsonfinder import jsonfinder
 
-def load_json_file(path: str) -> Dict[str, Any]:
+def read_json_file(path: str) -> Dict[str, Any]:
     try:
         with open(path, "r", encoding="utf-8") as f:
             return json.load(f)
     except Exception as e:
         print(f"Failed reading {path}: {e}")
         return {}
+
+def write_json_file(path: Path, content):
+    with open(path, "w", encoding="utf-8") as f:
+        if isinstance(content, str):
+            try:
+                content = json.loads(content)
+            except json.JSONDecodeError:
+                pass
+        json.dump(content, f, indent=2, ensure_ascii=False)
 
 def read_txt_file(path: str) -> str:
     try:

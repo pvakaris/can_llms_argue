@@ -3,7 +3,7 @@ from typing import Dict, Any, List, Tuple
 
 from .models import AIFNode, AIFEdge, AIFGraph
 from .test_config import NODES_KEY, EDGES_KEY, ORACLE_FILE_POSTFIX
-from shared.parser import load_json_file
+from shared.parser import read_json_file
 
 
 def extract_nodes(aif_json: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -19,7 +19,7 @@ def parse_aif_json(aif_json: Dict[str, Any]) -> AIFGraph:
     return AIFGraph(nodes=nodes, edges=edges)
 
 def get_aif_graph_from_path(path: str) -> AIFGraph:
-    obj = load_json_file(path)
+    obj = read_json_file(path)
     return parse_aif_json(obj)
 
 def find_pairs(resources_dir: Path) -> List[Tuple[Path, Path]]:

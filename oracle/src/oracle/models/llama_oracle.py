@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Any, Dict
 
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
@@ -30,25 +30,45 @@ def main(argv=None):
 
     print("Creating a pipeline ...")
 
-    generator = pipeline(
-        "text-generation",
-        model=model,
-        tokenizer=tokenizer,
-        # max_new_tokens=LLAMA_CONFIG["MAX_TOKENS"],
-        temperature=LLAMA_CONFIG["TEMPERATURE"],
-        device=0 if device.type == "mps" else -1,  # MPS is device 0
-        pad_token_id=tokenizer.eos_token_id
-    )
-    #
-    # # Load model directly
-    # from transformers import AutoTokenizer, AutoModelForCausalLM
-    #
-    # tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-3.1-8B")
-    # model = AutoModelForCausalLM.from_pretrained("meta-llama/Llama-3.1-8B")
+    # generator = pipeline(
+    #     "text-generation",
+    #     model=model,
+    #     tokenizer=tokenizer,
+    #     # max_new_tokens=LLAMA_CONFIG["MAX_TOKENS"],
+    #     temperature=LLAMA_CONFIG["TEMPERATURE"],
+    #     device=0 if device.type == "mps" else -1,
+    #     pad_token_id=tokenizer.eos_token_id
+    # )
 
     def llama_query_fn(prompt: str) -> Optional[str]:
         try:
-            return generator(prompt)[0]["generated_text"]
+            # message = generator(prompt)[0]["generated_text"]
+            inputs = tokenizer(prompt, return_tensors="pt").to(device)
+            input_tokens = inputs["input_ids"].shape[1]
+            print(f"Input tokens: {input_tokens}")
+            outputs = model.generate(
+                **inputs,
+                max_new_tokens=LLAMA_CONFIG["MAX_TOKENS"],
+                temperature=LLAMA_CONFIG["TEMPERATURE"],
+                do_sample=True,
+                pad_token_id=tokenizer.eos_token_id,
+            )
+
+            print(outputs)
+
+            message = tokenizer.decode(outputs[0], skip_special_tokens=True)
+
+            total_tokens = outputs.shape[1]
+            output_tokens = total_tokens - input_tokens
+            return {
+                "message": message,
+                "metadata": {
+                    "input_tokens": input_tokens,
+                    "output_tokens": output_tokens,
+                    "total_tokens": total_tokens,
+                    "model": LLAMA_CONFIG["MODEL_NAME"]
+                }
+            }
         except Exception as e:
             print("LLama generator error:", e)
             return None

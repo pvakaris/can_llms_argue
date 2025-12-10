@@ -1,13 +1,14 @@
+import time
 from pathlib import Path
 
 from oracle.models.oracle_config import ORACLE_FILE_POSTFIX, OUTPUT_DIR, PROMPT_CONFIG_FILE, INPUT_DIR, USE_INPUT_DIR, \
-    PRINT_MODEL_INPUT_AND_OUTPUT_FOR_DEBUG
-from shared.parser import read_txt_file, extract_last_json_or_error, extract_last_json
+    PRINT_MODEL_INPUT_AND_OUTPUT_FOR_DEBUG, METADATA_FILE_POSTFIX
+from shared.parser import read_txt_file, extract_last_json_or_error, extract_last_json, write_json_file
 from typing import Callable, Optional, Dict, Any
 import json
 
 def make_prompt(config: str, text: str) -> str:
-    return f"{config}\n\nText to draw the graph from:\n\"\"\"{text}\"\"\"\n\n\"\"\""
+    return f"{config}\n\nInput text:\n\"\"\"{text}\"\"\"\n\n\"\"\""
 
 def process_file(path: Path, output_path: Path, prompt_config_text: str, query_fn: Callable[[str], Optional[str]]) -> None:
     print(f"Processing file: {path.name}")
@@ -22,10 +23,13 @@ def process_file(path: Path, output_path: Path, prompt_config_text: str, query_f
         print("Model input:")
         print(prompt)
 
-    output: Optional[str] = None
+    output: Optional[Dict[str, Any]] = None
+    elapsed_time = 0
     try:
         print("Querying...")
+        start = time.time()
         output = query_fn(prompt)
+        elapsed_time = time.time() - start
         print("The query was successful" if output is not None else "No response returned")
     except Exception as e:
         print("Querying failed with error: ", e)
@@ -35,22 +39,28 @@ def process_file(path: Path, output_path: Path, prompt_config_text: str, query_f
         print("Model output:")
         print(output)
 
-    parsed_output = extract_last_json(output)
+    message = output["message"]
+    metadata = output["metadata"]
+    parsed_message = extract_last_json(message)
 
     if PRINT_MODEL_INPUT_AND_OUTPUT_FOR_DEBUG:
         print("Parsed model output as JSON:")
-        print(parsed_output)
+        print(parsed_message)
 
     base_name = path.stem
-    out_name = f"{base_name}{ORACLE_FILE_POSTFIX}.json"
-    out_path = output_path / out_name
-
     try:
-        with open(out_path, "w", encoding="utf-8") as f:
-            json.dump(parsed_output, f, indent=2, ensure_ascii=False)
+        message_out_name = f"{base_name}{ORACLE_FILE_POSTFIX}.json"
+        message_out_path = output_path / message_out_name
+        write_json_file(message_out_path, parsed_message)
+
+        if metadata is not None:
+            metadata["elapsed_time"] = elapsed_time
+            meta_out_name = f"{base_name}{ORACLE_FILE_POSTFIX}{METADATA_FILE_POSTFIX}.json"
+            meta_out_path = output_path / meta_out_name
+            write_json_file(meta_out_path, metadata)
         print(f"Wrote output to {OUTPUT_DIR}")
     except Exception as e:
-        print(f"Failed to write output to file {OUTPUT_DIR}/{out_name}: {e}")
+        print(f"Failed to write output to file {OUTPUT_DIR}/{message_out_name}: {e}")
 
 
 def interactive_mode(prompt_config: str,query_fn: Callable[[str], Optional[str]]) -> None:
