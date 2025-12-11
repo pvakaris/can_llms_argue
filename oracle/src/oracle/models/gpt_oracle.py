@@ -1,13 +1,16 @@
 import os
 import re
 import time
+from pathlib import Path
+
 from openai import OpenAI
 import sys
 from dotenv import load_dotenv
 from typing import Callable, Optional, Dict, Any
 
-from oracle.models.oracle_config import GPT_CONFIG
-from oracle.models.shared import run_with_query, make_prompt
+from oracle.models.oracle_config import GPT_CONFIG, PROMPT_CONFIG_FILE
+from oracle.models.shared import run_with_query
+from shared.parser import read_txt_file
 
 load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -22,22 +25,15 @@ def make_chatgpt_query(
     model: str = GPT_CONFIG["MODEL_NAME"],
     temperature: float = GPT_CONFIG["TEMPERATURE"],
     retries: int = 2,
-    system_prompt: Optional[str] = None
 ) -> Callable[[str], Optional[str]]:
 
     def query_fn(prompt_text: str) -> Optional[Dict[str, Any]]:
-        messages = []
-        if system_prompt:
-            messages.append({"role": "system", "content": system_prompt})
-
-        messages.append({"role": "user", "content": prompt_text})
-
         attempt = 0
         while attempt <= retries:
             try:
                 resp = None
-                if GPT_CONFIG["PROMPT_ID"] is not None and GPT_CONFIG["PROMPT_VERSION"] is not None:
-                    print("Using predefined prompt")
+                if GPT_CONFIG["USE_PROMPT"] is not None:
+                    print("Using predefined prompt...")
                     resp = client.responses.create(
                         prompt={
                             "id": GPT_CONFIG["PROMPT_ID"],
@@ -49,11 +45,10 @@ def make_chatgpt_query(
                     print("Using local config to construct the prompt")
                     resp = client.responses.create(
                         model=model,
-                        input=make_prompt(system_prompt, prompt_text),
+                        input=prompt_text,
                         temperature=temperature,
                     )
 
-                print(resp)
                 message_text = resp.output[1].content[0].text
                 metadata = {
                     "input_tokens": resp.usage.input_tokens,
@@ -77,6 +72,14 @@ def make_chatgpt_query(
 
     return query_fn
 
+def make_prompt_fn(text: str) -> str:
+    if GPT_CONFIG["USE_PROMPT"] is not None:
+        root = Path(__file__).resolve().parents[3]
+        prompt_config_path = root / PROMPT_CONFIG_FILE
+        config = read_txt_file(prompt_config_path)
+        return f"{config}\n\nInput text:\n\"\"\"{text}\"\"\"\n\n\"\"\""
+    return text
+
 # OpenAI models if asked to return a json usually return the response as ```json{...the actual json}```
 # This method cleans the response so that only the JSON object is returned
 def clean_json(json_str: str) -> str:
@@ -87,7 +90,7 @@ def main(argv=None):
     print("Starting ChatGPT oracle with argv:", argv)
 
     gpt_query_fn = make_chatgpt_query()
-    run_with_query(query_fn=gpt_query_fn)
+    run_with_query(query_fn=gpt_query_fn, make_prompt_fn=make_prompt_fn)
 
 if __name__ == "__main__":
     main()
