@@ -1,7 +1,8 @@
 import time
 from pathlib import Path
+import re
 
-from oracle.models.oracle_config import ORACLE_FILE_POSTFIX, OUTPUT_DIR, PROMPT_CONFIG_FILE, INPUT_DIR, USE_INPUT_DIR, \
+from oracle.models.oracle_config import ORACLE_FILE_POSTFIX, OUTPUT_DIR, INPUT_DIR, USE_INPUT_DIR, \
     PRINT_MODEL_INPUT_AND_OUTPUT_FOR_DEBUG, METADATA_FILE_POSTFIX
 from shared.parser import read_txt_file, extract_last_json_or_error, extract_last_json, write_json_file
 from typing import Callable, Optional, Dict, Any
@@ -75,8 +76,8 @@ def process_file(path: Path, output_path: Path, query_fn: Callable[[str], Option
         print("Model output:")
         print(output)
 
-    message = output["message"]
-    metadata = output["metadata"]
+    message = output.get("message")
+    metadata = output.get("metadata")
     parsed_message = extract_last_json(message)
 
     if PRINT_MODEL_INPUT_AND_OUTPUT_FOR_DEBUG:
@@ -129,4 +130,10 @@ def interactive_mode(query_fn: Callable[[str], Optional[Dict[str, Any]]], make_p
         print("\n=== Extracted AIF graph ===\n")
         print(json.dumps(parsed_output, indent=2, ensure_ascii=False))
         print("\n----------------------------------------\n")
+
+# OpenAI models if asked to return a json usually return the response as ```json{...the actual json}```
+# This method cleans the response so that only the JSON object is returned
+def clean_json(json_str: str) -> str:
+    match = re.search(r"```(?:json)?\s*(.*?)```", json_str, re.DOTALL)
+    return match.group(1).strip() if match else json_str.strip()
 

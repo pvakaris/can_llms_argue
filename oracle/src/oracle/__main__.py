@@ -7,7 +7,7 @@ from typing import List
 ORACLE_MAP = {
     "llama": "oracle.models.llama_oracle",
     "gpt": "oracle.models.gpt_oracle",
-    "gpt-local": "oracle.models.local_gpt_oracle",
+    "uva": "oracle.models.uva_oracle",
 }
 
 TESTER = "oracle.test.graph_comparison"

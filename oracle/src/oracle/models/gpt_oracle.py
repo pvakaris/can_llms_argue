@@ -1,5 +1,4 @@
 import os
-import re
 import time
 from pathlib import Path
 
@@ -9,7 +8,7 @@ from dotenv import load_dotenv
 from typing import Callable, Optional, Dict, Any
 
 from oracle.models.oracle_config import GPT_CONFIG, PROMPT_CONFIG_FILE
-from oracle.models.shared import run_with_query
+from oracle.models.shared import run_with_query, clean_json
 from shared.parser import read_txt_file
 
 load_dotenv()
@@ -32,7 +31,7 @@ def make_chatgpt_query(
         while attempt <= retries:
             try:
                 resp = None
-                if GPT_CONFIG["USE_PROMPT"] is not None:
+                if GPT_CONFIG["USE_PROMPT"] is not None and GPT_CONFIG["USE_PROMPT"] is True:
                     print("Using predefined prompt...")
                     resp = client.responses.create(
                         prompt={
@@ -73,18 +72,13 @@ def make_chatgpt_query(
     return query_fn
 
 def make_prompt_fn(text: str) -> str:
-    if GPT_CONFIG["USE_PROMPT"] is not None:
-        root = Path(__file__).resolve().parents[3]
-        prompt_config_path = root / PROMPT_CONFIG_FILE
-        config = read_txt_file(prompt_config_path)
-        return f"{config}\n\nInput text:\n\"\"\"{text}\"\"\"\n\n\"\"\""
-    return text
+    if GPT_CONFIG["USE_PROMPT"] is not None and GPT_CONFIG["USE_PROMPT"] is True:
+        return text
 
-# OpenAI models if asked to return a json usually return the response as ```json{...the actual json}```
-# This method cleans the response so that only the JSON object is returned
-def clean_json(json_str: str) -> str:
-    match = re.search(r"```(?:json)?\s*(.*?)```", json_str, re.DOTALL)
-    return match.group(1).strip() if match else json_str.strip()
+    root = Path(__file__).resolve().parents[3]
+    prompt_config_path = root / PROMPT_CONFIG_FILE
+    config = read_txt_file(prompt_config_path)
+    return f"{config}\n\nInput text:\n\"\"\"{text}\"\"\"\n\n\"\"\""
 
 def main(argv=None):
     print("Starting ChatGPT oracle with argv:", argv)

@@ -27,3 +27,9 @@ GPT_CONFIG = {
     "PROMPT_VERSION": "1",
     "USE_PROMPT": True
 }
+
+UVA_CONFIG = {
+    "MODEL_NAME" : "gpt-4",
+    "MAX_TOKENS" : 4096,
+    "TEMPERATURE" : 0.3,
+}
