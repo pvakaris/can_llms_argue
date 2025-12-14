@@ -51,11 +51,19 @@ def make_uva_query(
 
     def query_fn(prompt_text: str) -> Optional[Dict[str, Any]]:
         attempt = 0
+        root = Path(__file__).resolve().parents[3]
+        prompt_config_path = root / PROMPT_CONFIG_FILE
+        config = read_txt_file(prompt_config_path)
+
         while attempt <= retries:
             try:
                 response = client.chat.completions.create(
                     model=model,
                     messages=[
+                        {
+                            "role": "developer",
+                            "content": config
+                        },
                         {
                             "role": "user",
                             "content": prompt_text,
@@ -88,10 +96,7 @@ def make_uva_query(
     return query_fn
 
 def make_prompt_fn(text: str) -> str:
-    root = Path(__file__).resolve().parents[3]
-    prompt_config_path = root / PROMPT_CONFIG_FILE
-    config = read_txt_file(prompt_config_path)
-    return f"{config}\n\nInput text:\n\"\"\"{text}\"\"\"\n\n\"\"\""
+    return text
 
 def main(argv=None):
     print("Starting UvA oracle with argv:", argv)
