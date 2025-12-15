@@ -12,8 +12,8 @@ oracle/resources/input/*
 oracle/resources/output/*
 !oracle/resources/output/.gitkeep
 
-discussion_module/resources/input/*
-!discussion_module/resources/input/.gitkeep
+discussion_module/resources/output/*
+!discussion_module/resources/output/.gitkeep
 
 oracle/resources/test_data/
 

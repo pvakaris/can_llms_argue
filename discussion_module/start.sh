@@ -2,6 +2,9 @@
 
 set -e
 
+MODULE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$MODULE_DIR"
+
 # Default model is gemma3 the same as in discussion_config.py. Override in .env
 MODEL="${MODEL:-gemma3}"
 
