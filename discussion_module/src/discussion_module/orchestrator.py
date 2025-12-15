@@ -1,84 +1,118 @@
-import argparse
-from langchain_ollama import OllamaLLM
+import datetime
+import json
+from pathlib import Path
+
 import requests
-import time
 
-def pull_model_on_all(ports, model="llama3"):
-    for port in ports:
-        print(f"Pulling model on Agent at port {port} ...")
-        r = requests.post(f"http://localhost:{port}/api/pull", json={"name": model})
-
-        try:
-            r.raise_for_status()
-        except requests.HTTPError as e:
-            raise requests.HTTPError(
-                f"Failed to pull model on port {port}: {r.text}"
-            ) from e
-
-        print(f"Agent {port} acknowledged model pull.")
+from discussion_module.discussion_config import HOST, BASE_PORT, PARTICIPANTS, CYCLES, MODEL, QUESTION, \
+    PARTICIPANT_CONFIG, OUTPUT_LIMIT_PER_PARTICIPANT, PRINT_OUTPUT, OUTPUT_DIR, ADD_DATE_TO_RESULTS_FILE_POSTFIX
+from shared.parser import read_txt_file, write_json_file
 
 
-def wait_for_agents(ports, timeout=300):
-    start_time = time.time()
-    while True:
-        all_ready = True
-        for port in ports:
-            try:
-                r = requests.get(f"http://localhost:{port}/api/tags", timeout=3)
-                if r.status_code != 200:
-                    all_ready = False
-                    break
-            except Exception:
-                all_ready = False
-                break
-        if all_ready:
-            print("All agents are ready.")
-            return
-        if time.time() - start_time > timeout:
-            raise TimeoutError("Timed out waiting for agents.")
-        time.sleep(2)
+def build_endpoints(host, base_port, participants):
+    return [
+        f"{host}:{base_port + i}"
+        for i in range(participants)
+    ]
 
-class LLMContainerAgent:
-    def __init__(self, name, model, base_url):
-        self.name = name
-        self.llm = OllamaLLM(base_url=base_url, model=model)
+def chat(endpoint, model, messages):
+    response = requests.post(
+        f"{endpoint}/api/chat",
+        json={
+            "model": model,
+            "messages": messages,
+            "stream": False,
+        },
+        timeout=300,
+    )
+    response.raise_for_status()
+    return response.json()["message"]["content"]
 
-    def respond(self, message):
-        response = self.llm.invoke(message)
-        return response
+def print_results(transcript):
+    try:
+        print("Saving the results...")
+        root = Path(__file__).resolve().parents[2]
+        output_dir = root / OUTPUT_DIR
 
-def run_discussion(agents, question, turns=5):
-    print(f"=== Starting discussion on: {question} ===")
-    message = question
-    for i in range(turns):
-        agent = agents[i % len(agents)]
-        response = agent.respond(message)
-        print(f"\n[{agent.name}]: {response}")
-        message = response
-    print("\n=== Discussion ended ===")
+        postfix = f"_{datetime.datetime.now().strftime('%Y_%m_%d_%H_%M_%S')}" if ADD_DATE_TO_RESULTS_FILE_POSTFIX else ""
+        out_json = output_dir / f"discussion{postfix}.json"
+        with open(out_json, "w", encoding="utf-8") as f:
+            json.dump(transcript, f, ensure_ascii=False, indent=2)
+        if PRINT_OUTPUT:
+            name = OUTPUT_DIR / f"discussion{postfix}.json"
+            print(f"Structured transcript saved as JSON: {name}")
 
-def main(n, question):
-    agents = []
-    ports = []
-    base_port = 11434
-    for i in range(n):
-        port = base_port + i
-        agents.append(LLMContainerAgent(
-            name=f"Agent_{i+1}",
-            model="llama3",
-            base_url=f"http://localhost:{port}"
-        ))
-        ports.append(port)
+        out_txt = output_dir / f"discussion{postfix}.txt"
+        with open(out_txt, "w", encoding="utf-8") as f:
+            for entry in transcript:
+                line = f"participant{entry['participant']}: {entry['answer']}\n"
+                f.write(line)
+        if PRINT_OUTPUT:
+            name = OUTPUT_DIR / f"discussion{postfix}.json"
+            print(f"Transcript saved as text: {name}")
+        print("Results saved successfully...")
+    except Exception as e:
+        print("Failed to save results...")
+        print(f"Error: {e}")
 
-    wait_for_agents(ports)
-    pull_model_on_all(ports)
-    run_discussion(agents, question)
+def run_discussion():
+    print("Discussion started...")
+    endpoints = build_endpoints(HOST, BASE_PORT, PARTICIPANTS)
+    transcript = []
+    last_answer = None
+    turn = 1
+    root = Path(__file__).resolve().parents[2]
+    participant_config = read_txt_file(root / PARTICIPANT_CONFIG)
 
+    if OUTPUT_LIMIT_PER_PARTICIPANT is not None:
+        participant_config += f"\n{OUTPUT_LIMIT_PER_PARTICIPANT}"
 
+    for cycle in range(CYCLES):
+        if PRINT_OUTPUT:
+            print(f"Cycle {cycle + 1}/{CYCLES}")
+        for i, endpoint in enumerate(endpoints):
+            messages = [
+                {
+                    "role": "system",
+                    "content": participant_config
+                },
+                {
+                    "role": "user",
+                    "content": f"Question:\n{QUESTION}"
+                },
+            ]
+
+            if last_answer:
+                messages.append(
+                    {
+                        "role": "user",
+                        "content": f"Previous answer:\n{last_answer}",
+                    }
+                )
+
+            answer = chat(endpoint, MODEL, messages)
+            entry = {
+                "turn": turn,
+                "cycle": cycle + 1,
+                "participant": i + 1,
+                "endpoint": endpoint,
+                "answer": answer,
+            }
+
+            transcript.append(entry)
+            if PRINT_OUTPUT:
+                print(
+                    f"\nTurn {turn} | Participant {i + 1} | {endpoint}"
+                )
+                print(answer)
+
+            last_answer = answer
+            turn += 1
+
+    print("Discussion ended...")
+    print_results(transcript)
+    print("Exiting the discussion module...")
+    return transcript
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--n", type=int, required=True)
-    parser.add_argument("--question", type=str, required=True)
-    args = parser.parse_args()
-    main(args.n, args.question)
+    run_discussion()

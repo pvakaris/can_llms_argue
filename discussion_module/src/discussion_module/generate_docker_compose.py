@@ -1,9 +1,11 @@
-import sys
 import yaml
 
+from discussion_module.discussion_config import BASE_PORT, PARTICIPANTS
+
 def generate_docker_compose(n):
+    print(f"Generating docker-compose with {n} agents.")
     compose = {"services": {}}
-    base_port = 11434
+    base_port = BASE_PORT
     for i in range(n):
         service_name = f"ollama{i+1}"
         compose["services"][service_name] = {
@@ -21,11 +23,7 @@ def generate_docker_compose(n):
     print(f"Generated docker-compose.generated.yml with {n} agents.")
 
 def main():
-    if len(sys.argv) != 2:
-        print("Usage: python generate_docker_compose.py <n>")
-        sys.exit(1)
-    n = int(sys.argv[1])
-    generate_docker_compose(n)
+    generate_docker_compose(PARTICIPANTS)
 
 if __name__ == "__main__":
     main()

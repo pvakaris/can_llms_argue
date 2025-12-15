@@ -50,7 +50,6 @@ def extract_last_json_or_error(result_text: str):
 
 def extract_last_json(result_text):
     found = list(jsonfinder(result_text))
-    # Pick last non-None parsed object
     for _, _, obj in reversed(found):
         if obj is not None:
             return obj

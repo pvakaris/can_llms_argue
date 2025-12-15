@@ -2,17 +2,17 @@
 
 set -e
 
-N=$1
-MODEL=$2
+# Default model is gemma3 the same as in discussion_config.py. Override in .env
+MODEL="${MODEL:-gemma3}"
 
-if [ -z "$N" ] || [ -z "MODEL" ]; then
-    echo "Usage: ./run.sh <number_of_agents> <ollama model>"
-    exit 1
+AUTO_LAUNCH=false
+if [ "$1" == "auto-launch" ]; then
+    AUTO_LAUNCH=true
 fi
 
 function cleanup {
-    echo "An error occurred. Cleaning up containers..."
-    docker compose -f docker-compose.generated.yml down || true
+    echo "An error occurred. Cleaning up containers and volumes..."
+    docker compose -f docker-compose.generated.yml down -v || true
     exit 1
 }
 
@@ -35,18 +35,19 @@ fi
 echo "Installing Python dependencies"
 pip install .
 
-echo "Generating docker-compose file with $N agents"
-python3 -m discussion_module.generate_docker_compose $N
+python -m discussion_module.generate_docker_compose
 
 echo "Deploying containers"
 docker compose -f docker-compose.generated.yml up -d
 
-echo "Pulling the specified model"
-docker exec ollama1 ollama pull $MODEL
-
-#echo "Starting the discussion framework on the question: $QUESTION"
-#python3 orchestrator.py
-#
-#docker-compose -f docker-compose.generated.yml down
+echo "Pulling the model: $MODEL"
+docker exec ollama1 ollama pull "$MODEL"
 
 echo "Setup finished successfully"
+
+if [ "$AUTO_LAUNCH" = true ]; then
+    echo "Auto-launch is enabled. Launching the discussion module..."
+    python -m discussion_module.orchestrator
+    echo "Deconstructing the Docker network and removing the volumes"
+    docker compose -f docker-compose.generated.yml down -v || true
+fi

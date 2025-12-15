@@ -53,9 +53,17 @@ Contains shared resources, utilities and models. For more information see the ot
 
          python -m oracle model -m llama 
    
-   - Run the GPT-5 oracle:
+   - Run the GPT-5 oracle (needs OPENAI_API_KEY provided in .env file):
 
          python -m oracle model -m gpt 
+   
+   - Run the UvA oracle (needs UVA_AI_API_KEY provided in .env file):
+
+         python -m oracle model -m uva 
+   
+   - Run the oracle result analyser:
+
+         python -m oracle analyse
    
    - Run the oracle benchmark test:
 
@@ -63,7 +71,7 @@ Contains shared resources, utilities and models. For more information see the ot
    
    - Run the discussion_module:
 
-         python -m discussion_module discourse
+         ./start.sh auto-launch
 
 5. Optionally, run SonarQube to perform code analysis. For that, refer to [here](helpers/sonarqube_test.txt).
 

@@ -12,6 +12,9 @@ oracle/resources/input/*
 oracle/resources/output/*
 !oracle/resources/output/.gitkeep
 
+discussion_module/resources/input/*
+!discussion_module/resources/input/.gitkeep
+
 oracle/resources/test_data/
 
 # Sonar
