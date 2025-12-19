@@ -30,7 +30,7 @@ GPT_CONFIG = {
     "MAX_TOKENS": int(os.getenv("ORACLE_GPT_MAX_TOKENS", 4096)),
     "TEMPERATURE": float(os.getenv("ORACLE_GPT_TEMPERATURE", 0.3)),
     "PROMPT_ID": os.getenv("ORACLE_GPT_PROMPT_ID", "pmpt_6939bb21e7d881908d12e8f5363c41cf0e8623fe874c1b4d"),
-    "PROMPT_VERSION": os.getenv("ORACLE_GPT_PROMPT_VERSION", "1"),
+    "PROMPT_VERSION": os.getenv("ORACLE_GPT_PROMPT_VERSION", "2"),
     "USE_PROMPT": env_bool("ORACLE_GPT_USE_PROMPT", True)
 }
 

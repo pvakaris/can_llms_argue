@@ -31,8 +31,11 @@ def make_chatgpt_query(
         while attempt <= retries:
             try:
                 resp = None
+                message = None
                 if GPT_CONFIG["USE_PROMPT"] is not None and GPT_CONFIG["USE_PROMPT"] is True:
                     print("Using predefined prompt...")
+                    print(GPT_CONFIG["PROMPT_ID"])
+                    print(GPT_CONFIG["PROMPT_VERSION"])
                     resp = client.responses.create(
                         prompt={
                             "id": GPT_CONFIG["PROMPT_ID"],
@@ -40,6 +43,7 @@ def make_chatgpt_query(
                         },
                         input=prompt_text
                     )
+                    message = resp.output[1].content[0].text
                 else:
                     print("Using local config to construct the prompt")
                     resp = client.responses.create(
@@ -47,8 +51,9 @@ def make_chatgpt_query(
                         input=prompt_text,
                         temperature=temperature,
                     )
+                    message = resp.output[0].content[0].text
+                print(resp)
 
-                message_text = resp.output[1].content[0].text
                 metadata = {
                     "input_tokens": resp.usage.input_tokens,
                     "output_tokens": resp.usage.output_tokens,
@@ -57,7 +62,7 @@ def make_chatgpt_query(
                 }
 
                 return {
-                    "message": clean_json(message_text),
+                    "message": clean_json(message),
                     "metadata": metadata
                 }
             except Exception as e:
