@@ -1,0 +1,28 @@
+[project]
+name = "oracle"
+version = "0.0.1"
+description = "AIF oracle"
+readme = "README.md"
+requires-python = ">=3.9.6"
+
+dependencies = [
+    "transformers",
+    "kernels",
+    "langchain",
+    "langchain-huggingface",
+    "accelerate",
+    "urllib3<2",
+    "torch",
+    "networkx",
+    "scipy",
+    "dotenv",
+    "openai"
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+

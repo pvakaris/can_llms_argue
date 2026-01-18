@@ -1,0 +1,16 @@
+[project]
+name = "discussion_module"
+version = "0.0.1"
+description = "LLM discussion module"
+readme = "README.md"
+requires-python = ">=3.9.6"
+
+dependencies = [
+    "langchain>=0.2.0",
+    "langchain-ollama>=0.1.0",
+    "pyyaml",
+    "requests"
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]

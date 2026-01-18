@@ -1,0 +1,26 @@
+Run SonarQube locally using Docker:
+
+First, launch Docker
+
+    docker pull sonarqube
+
+    docker run -d --name sonarqube-db -e POSTGRES_USER=sonar -e POSTGRES_PASSWORD=sonar -e POSTGRES_DB=sonarqube postgres:alpine
+
+    docker run -d --name sonarqube -p 9000:9000 --link sonarqube-db:db -e SONAR_JDBC_URL=jdbc:postgresql://db:5432/sonarqube -e SONAR_JDBC_USERNAME=sonar -e SONAR_JDBC_PASSWORD=sonar sonarqube
+
+Go to http://localhost:9000 . Login credentials are admin:admin
+Change the password
+Create a project named "framework"
+Go to My Account -> Security
+Generate a new global analysis token. Copy and use in the command below
+
+Then run the following commands:
+
+    pip install pysonar
+
+    pysonar \
+      --sonar-host-url=http://localhost:9000 \
+      --sonar-token=PROVIDE_YOUR_ANALYSIS_TOKEN_HERE \
+      --sonar-project-key=framework
+
+Inspect the static code analysis
